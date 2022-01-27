@@ -25,11 +25,27 @@ const getUserByEmail = function(email, database){
   }
   return undefined;
 };
+
+const passwordChecker = function(password, database){
+  for (let userID in database) {
+    if (password === database[userID].password) {
+      return database[userID];
+    }
+  }
+  return undefined;
+};
+
 const randomID = generateRandomString();
 
 const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  b6UTxQ: {
+      longURL: "https://www.tsn.ca",
+      userID: "aJ48lW"
+  },
+  i3BoGr: {
+      longURL: "https://www.google.ca",
+      userID: "aJ48lW"
+  }
 };
 
 const users = { 
@@ -52,6 +68,9 @@ app.get("/urls/new", (req, res) => {
   const templateVars = {
     user,
   }
+  if (!userID) {
+    res.redirect("/login");
+  }
   res.render("urls_new", templateVars);
 });
 
@@ -71,8 +90,7 @@ app.get("/urls", (req, res) => {
   res.render("urls_index", templateVars);
 });
 
-app.post("/urls", (req, res) => {
-  console.log(req.body);  // Log the POST request body to the console
+app.post("/urls", (req, res) => {  // Log the POST request body to the console
   res.redirect(`/urls/${randomID}`);
   urlDatabase[randomID] = req.body.longURL;
 });
@@ -108,20 +126,19 @@ app.post("/urls/:shortURL/update", (req,res) => {
   res.redirect("/urls");
 });
 
-//LOGIN AND LOGOUT COOKIE STORAGE
+//LOGIN RESTORES EXISTING COOKIE IN DATABASE AND LOGOUT CLEARS THE COOKIE STORAGE
 app.post("/login", (req, res) => {
   const userChecker = getUserByEmail(req.body.email, users);
   if (userChecker) {
-    for (let userID in users) {
-      if (req.body.password === users[userID].password) {
-        const user_id = users[userID].id;
-        res.cookie('user', user_id);
-        res.redirect(`/urls`);
-        console.log(users[user_id]);
-      }
+    if (userChecker.password === req.body.password) {
+      const user_id = userChecker.id;
+      res.cookie('user', user_id);
+      res.redirect(`/urls`);
+    } else if (req.body.password !== users.password) {
+      return res.status(403).send("Password does not match.");
     }
   } else {
-    return res.status(403).send("Email does not exist. Please register.")
+    return res.status(403).send("Email does not or password does not match. Please register.")
   }
 });
 
@@ -162,7 +179,6 @@ app.post("/register", (req, res) => {
   };
   res.cookie('user', user_id);
   res.redirect(`/urls`);
-  console.log(users[user_id]);
 });
 
 
