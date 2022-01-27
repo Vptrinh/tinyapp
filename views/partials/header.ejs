@@ -8,20 +8,23 @@
       <div class="navbar-nav">
         <a class="nav-item nav-link" href="/urls">My URLs</a>
         <a class="nav-item nav-link" href="/urls/new">Create New URL</a>
-        <a class="nav-item nav-link" href="/register">Register</a>
       </div>
     </div>
-    <% if (!user_id) { %>
-    <form method="POST" class="form-inline" action="/login">
-      <input name="username" placeholder="Username" style="border-radius: 5px" />
-      <button type="submit" class="btn btn-outline-dark" style="margin-left: 15px">Login</button></form>
-      <% }%>
-      <% if (user_id) { %> 
-      <p>
-        <form method="POST" class="form-inline" action="/logout">
-          Logged In As: <%= users_id %>!
-          <button type="submit" class="btn btn-outline-dark" style="margin-left: 15px">Logout</button></form>
-      </p>
+    <% if (!user) { %>
+      <div id="navbarNavAltMarkup">
+        <div class="navbar-nav">
+          <a class="nav-item nav-link" href="/register">Register</a>
+          <a class="nav-item nav-link" href="/login">Login</a>
+        </div>
+      </div>
+    <% }%>
+      <% if (user) { %> 
+        <p>
+          <form method="POST" class="form-inline" action="/logout">
+            Logged In As: <%= user.email %>!
+            <button type="submit" class="btn btn-outline-dark" style="margin-left: 15px">Logout</button>
+          </form>
+        </p>
       <% } %>
   </nav>
 </header>
