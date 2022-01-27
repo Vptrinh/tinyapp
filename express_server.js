@@ -1,7 +1,8 @@
 const express = require("express");
 const app = express();
 const PORT = 3000; // default port 8080
-const path = require("path");
+const bcrypt = require('bcryptjs');
+const salt = bcrypt.genSaltSync(10);
 
 app.set("view engine", "ejs");
 
@@ -24,10 +25,22 @@ const getUserByEmail = function(email, database){
       return database[userID];
     }
   }
-  return undefined;
+  return false;
 };
 
-const randomID = generateRandomString();
+const authenticateUser = (email, password) => {
+  const user = getUserByEmail(email, users);
+
+  console.log("FORM PASSWORD:", password, "DB PASSWORD:", user.password);
+
+  // if we got a user back and the passwords match then return the userObj
+  if (user && bcrypt.compareSync(password, user.password)) {
+    // user is authenticated
+    return user;
+  } else {
+    return false;
+  }
+};
 
 const urlDatabase = {
   b6UTxQ: {
@@ -155,18 +168,19 @@ app.post("/urls/:shortURL/update", (req,res) => {
 
 //LOGIN RESTORES EXISTING COOKIE IN DATABASE AND LOGOUT CLEARS THE COOKIE STORAGE
 app.post("/login", (req, res) => {
-  const userChecker = getUserByEmail(req.body.email, users);
-  if (userChecker) {
-    if (userChecker.password === req.body.password) {
-      const user_id = userChecker.id;
+  const email = req.body.email;
+  const password = req.body.password;
+
+  const user = authenticateUser(email,password);
+
+  //If authenticated, set a cookie with its user id and redirect.
+  if (user) {
+    const user_id = user.id
       res.cookie('user', user_id);
       res.redirect(`/urls`);
-    } else if (req.body.password !== users.password) {
-      return res.status(403).send("Password does not match.");
+    } else {
+      return res.status(403).send("Wrong credentials!");
     }
-  } else {
-    return res.status(403).send("Email does not or password does not match. Please register.")
-  }
 });
 
 app.post("/logout", (req, res) => {
@@ -202,7 +216,7 @@ app.post("/register", (req, res) => {
   users[user_id] = {
     id: user_id,
     email: req.body.email,
-    password: req.body.password
+    password: bcrypt.hashSync(req.body.password, salt),
   };
   res.cookie('user', user_id);
   res.redirect(`/urls`);
