@@ -1,6 +1,6 @@
 const express = require("express");
 const app = express();
-const PORT = 8080; // default port 8080
+const PORT = 3000; // default port 8080
 const path = require("path");
 
 app.set("view engine", "ejs");
@@ -13,6 +13,7 @@ app.use(cookieParser());
 
 function generateRandomString() {
   let newURL = Math.random().toString(36).substr(2,6);
+  console.log("Generate random string: ", newURL);
   return newURL;
 };
 
@@ -20,15 +21,6 @@ function generateRandomString() {
 const getUserByEmail = function(email, database){
   for (let userID in database) {
     if (email === database[userID].email) {
-      return database[userID];
-    }
-  }
-  return undefined;
-};
-
-const passwordChecker = function(password, database){
-  for (let userID in database) {
-    if (password === database[userID].password) {
       return database[userID];
     }
   }
@@ -68,10 +60,11 @@ app.get("/urls/new", (req, res) => {
   const templateVars = {
     user,
   }
-  if (!userID) {
+  if (!user) {
     res.redirect("/login");
-  }
+  } else {
   res.render("urls_new", templateVars);
+  }
 });
 
 app.listen(PORT, () => {
@@ -84,46 +77,80 @@ app.get("/urls.json", (req, res) => {
 
 //HOME PAGE
 app.get("/urls", (req, res) => {
-  const userID = req.cookies["user"]
-  const user = users[userID]
-  const templateVars = { urls: urlDatabase, user };
+  const userID = req.cookies["user"];
+  const user = users[userID];
+  const templateVars = { urls: urlDatabase, shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL], user };
   res.render("urls_index", templateVars);
+  console.log(user)
+  console.log(urlDatabase)
 });
 
 app.post("/urls", (req, res) => {  // Log the POST request body to the console
+  const randomID = generateRandomString();
+  const userID = req.cookies["user"];
+  const user = users[userID];
+  urlDatabase[randomID] = {
+    longURL: req.body.longURL,
+    userID: user.id,
+  }
+  console.log(urlDatabase);
   res.redirect(`/urls/${randomID}`);
-  urlDatabase[randomID] = req.body.longURL;
 });
 
 app.get("/urls/:shortURL", (req, res) => {
   const userID = req.cookies["user"]
   const user = users[userID]
-  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL], user };
+  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL, user};
   res.render("urls_show", templateVars);
 });
 
 //DELETE WEBPAGE
 app.post("/urls/:shortURL/delete", (req, res) => {
-  delete urlDatabase[req.params.shortURL];
-  res.redirect("/urls");
+  const userID = req.cookies["user"]
+  const user = users[userID]
+  const templateVars = {
+    user,
+  }
+  if (!user) {
+    return res.status(403).send("Cannot delete shortURL. Please login or register.")
+  } else {
+    delete urlDatabase[req.params.shortURL];
+    res.redirect("/urls");
+  }
 });
 
 //REDIRECT TO LONG URL AFTER CREATING THE SHORTURL
 app.get("/u/:shortURL", (req, res) => {
-  const longURL = urlDatabase[req.params.shortURL];
+  const longURL = urlDatabase[req.params.shortURL].longURL;
   res.redirect(longURL);
 });
 
 app.post("/urls/:shortURL/edit", (req, res) => {
   const shortURL = req.params.shortURL;
-  res.redirect(`/urls/${shortURL}`);
+  const userID = req.cookies["user"]
+  const user = users[userID]
+  if (!user) {
+    return res.status(403).send("Cannot delete shortURL. Please login or register.")
+  } else {
+    res.redirect(`/urls/${shortURL}`);
+  }
 });
 
+
+//Updated to new URLDatabase format
 app.post("/urls/:shortURL/update", (req,res) => {
-  const newURL = req.body.longURL;
+  const userID = req.cookies["user"];
+  const user = users[userID];
   const shortURL = req.params.shortURL;
-  urlDatabase[shortURL] = newURL;
-  res.redirect("/urls");
+  if (!user) {
+    return res.status(403).send("Cannot delete shortURL. Please login or register.")
+  } else {
+    urlDatabase[shortURL] = {
+      longURL: req.body.longURL,
+      userID: user.id,
+    }
+    res.redirect("/urls");
+  }
 });
 
 //LOGIN RESTORES EXISTING COOKIE IN DATABASE AND LOGOUT CLEARS THE COOKIE STORAGE
